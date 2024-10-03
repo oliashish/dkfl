@@ -7,8 +7,9 @@ pub enum Projects {
     Python,
     Ruby,
     Php,
-    Kotlin,
-    Java,
+    GradleJava,
+    MavenJava,
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -20,10 +21,11 @@ pub enum Filetype {
     ComposerJson,
     PomXml,
     BuildGradle,
+    GoSum,
 }
 
 impl Filetype {
-    fn to_str(&self) -> &'static str {
+    pub fn to_str(&self) -> &'static str {
         match self {
             Filetype::BuildGradle => "build.gradle",
             Filetype::PomXml => "pom.xml",
@@ -32,6 +34,7 @@ impl Filetype {
             Filetype::CargoToml => "Cargo.toml",
             Filetype::RequirementsTxt => "requirements.txt",
             Filetype::ComposerJson => "composer.json",
+            Filetype::GoSum => "go.sum",
         }
     }
 }
