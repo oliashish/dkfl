@@ -27,7 +27,6 @@ fn main() {
 
     match &app.command {
         Commands::Create { path } => {
-            println!("Path recieved: {:?}", path);
             let project = detect::detect_project(path);
             println!("Project from main : {:?}", project)
         }

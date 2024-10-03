@@ -10,7 +10,10 @@ pub fn detect_project(path: &PathBuf) -> Result<enums::Projects, Error> {
         Ok(dir) => {
             for entry in dir {
                 let dir_entry = entry?;
-                println!("Directory entries: {:?}", dir_entry.path())
+                println!(
+                    "Directory entries: {:?}",
+                    dir_entry.path().file_name().unwrap()
+                )
             }
         }
         Err(err) => {
