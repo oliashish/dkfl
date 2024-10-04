@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use log::{debug, error, info, log_enabled, Level};
 use std::path::PathBuf;
 
 mod detect;
@@ -23,6 +24,8 @@ enum Commands {
 }
 
 fn main() {
+    env_logger::init();
+
     let app = App::parse();
 
     match &app.command {
