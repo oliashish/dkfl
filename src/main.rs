@@ -37,30 +37,20 @@ fn main() {
             let project = detect::detect_project(dir);
 
             // handle result and call the generate_template function
-            if let Ok(project) = project {
-                match project {
-                    enums::Projects::Nodejs => todo!(),
-                    enums::Projects::Rust => {
-                        let rust_dockerfile = generate_dkfl::generate_dockerfile(project);
-                        // Call write to directory function
-                        let _res = create::create_dockerfile(&rust_dockerfile, &mut path.clone());
-                    }
-                    enums::Projects::Go => todo!(),
-                    enums::Projects::Python => todo!(),
-                    enums::Projects::Ruby => todo!(),
-                    enums::Projects::Php => todo!(),
-                    enums::Projects::GradleJava => todo!(),
-                    enums::Projects::MavenJava => todo!(),
-                    enums::Projects::Unknown => todo!(),
+            match project {
+                Ok(project) => {
+                    let dockerfile = generate_dkfl::generate_dockerfile(project);
+                    // Call write to directory function
+                    let _res = create::create_dockerfile(&dockerfile, &mut path.clone());
                 }
-            } else {
-                info!("Unable to detect language/framework");
-                error!("Unable to detect language/framework");
+                Err(err) => {
+                    info!("Unable to detect language/framework error: {}", err);
+                    error!("Unable to detect language/framework error: {}", err);
+                }
             }
 
             // read the root project file and take information like version, app_name, cmd to run the production server etc
-
-            info!("Project from main : {:?}", project);
+            // TODO
         }
     }
 }

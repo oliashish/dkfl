@@ -1,3 +1,5 @@
+// TODO - Take image_name, app_name and CMD from user input or read the root file and package file
+
 pub fn rust_dkfl<'a>(image_name: &'a str, app_name: &'a str, work_dir: &'a str) -> String {
     let rust_dkfl_template = format!(
         r#"
