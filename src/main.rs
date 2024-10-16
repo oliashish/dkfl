@@ -1,9 +1,12 @@
 use clap::{Parser, Subcommand};
 use log::{error, info};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
+mod create;
 mod detect;
 mod enums;
+mod generate_dkfl;
+mod templates;
 
 #[derive(Parser)]
 #[command(name = "dkfl")]
@@ -33,9 +36,21 @@ fn main() {
             let dir = std::fs::read_dir(path);
             let project = detect::detect_project(dir);
 
-            // read the root project file and take information like version, app_name, cmd to run the production server etc
+            // handle result and call the generate_template function
+            match project {
+                Ok(project) => {
+                    let dockerfile = generate_dkfl::generate_dockerfile(project);
+                    // Call write to directory function
+                    let _res = create::create_dockerfile(&dockerfile, &mut path.clone());
+                }
+                Err(err) => {
+                    info!("Unable to detect language/framework error: {}", err);
+                    error!("Unable to detect language/framework error: {}", err);
+                }
+            }
 
-            info!("Project from main : {:?}", project);
+            // read the root project file and take information like version, app_name, cmd to run the production server etc
+            // TODO
         }
     }
 }
