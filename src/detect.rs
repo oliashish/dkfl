@@ -1,67 +1,81 @@
-use crate::enums::{self, Projects};
-use anyhow::Error;
-use std::{fs, path::PathBuf, process::exit};
+use std::collections::{HashMap, HashSet};
+// use std::process::exit;
 
-pub fn detect_project(path: &PathBuf) -> Result<enums::Projects, Error> {
-    let dir = fs::read_dir(path);
+use log::{error, info, warn};
 
-    // let project =
-    match dir {
-        Ok(dir) => {
-            let mut files = Vec::new();
-            for entry in dir {
-                let dir_entry = entry?;
-                if let Some(file_name) = dir_entry.file_name().to_str() {
-                    files.push(file_name.to_string());
-                };
+// Assuming these are your enums and structs
+use crate::enums::{Filetype, Projects};
+
+pub fn detect_project(
+    dir: Result<impl Iterator<Item = Result<std::fs::DirEntry, std::io::Error>>, std::io::Error>,
+) -> Result<Projects, std::io::Error> {
+    let dir_entries = dir?;
+
+    // Collect file names into a HashSet for efficient lookup
+    let file_names: HashSet<String> = dir_entries
+        .filter_map(|entry_result| match entry_result {
+            Ok(entry) => entry.file_name().to_str().map(String::from),
+            Err(err) => {
+                error!("Error reading directory entry: {:?}", err);
+                None
             }
+        })
+        .collect();
 
-            let project = match true {
-                _ if files.contains(&enums::Filetype::BuildGradle.to_str().to_owned()) => {
-                    println!("Gradle Java Projoct Detected");
-                    Projects::GradleJava
-                }
-                _ if files.contains(&enums::Filetype::PomXml.to_str().to_owned()) => {
-                    println!("Maven Java Projoct Detected");
+    // Map file names to Projects variants and messages
+    let project_map: HashMap<&str, (Projects, &str)> = [
+        (
+            Filetype::BuildGradle.to_str(),
+            (Projects::GradleJava, "Gradle Java Project Detected"),
+        ),
+        (
+            Filetype::PomXml.to_str(),
+            (Projects::MavenJava, "Maven Java Project Detected"),
+        ),
+        (
+            Filetype::PackageJson.to_str(),
+            (Projects::Nodejs, "NodeJS Project Detected"),
+        ),
+        (
+            Filetype::Gemfile.to_str(),
+            (Projects::Ruby, "Ruby on Rails Project Detected"),
+        ),
+        (
+            Filetype::CargoToml.to_str(),
+            (Projects::Rust, "Rust Project Detected"),
+        ),
+        (
+            Filetype::RequirementsTxt.to_str(),
+            (Projects::Python, "Python Project Detected"),
+        ),
+        (
+            Filetype::ComposerJson.to_str(),
+            (Projects::Php, "PHP Project Detected"),
+        ),
+        (
+            Filetype::GoSum.to_str(),
+            (Projects::Go, "Go Project Detected"),
+        ),
+    ]
+    .iter()
+    .cloned()
+    .collect();
 
-                    Projects::MavenJava
-                }
-                _ if files.contains(&enums::Filetype::PackageJson.to_str().to_owned()) => {
-                    println!("NodeJS Projoct Detected");
+    // Find the project based on the presence of specific files
+    let project = file_names
+        .iter()
+        .find_map(|file_name| {
+            project_map
+                .get(file_name.as_str())
+                .map(|&(project, message)| {
+                    info!("{}", message);
+                    project
+                })
+        })
+        .unwrap_or_else(|| {
+            warn!("Unknown or Unsupported Project Detected");
+            Projects::Unknown
+        });
 
-                    Projects::Nodejs
-                }
-                _ if files.contains(&enums::Filetype::Gemfile.to_str().to_owned()) => {
-                    println!("Ruby on rails Projoct Detected");
-
-                    Projects::Ruby
-                }
-                _ if files.contains(&enums::Filetype::CargoToml.to_str().to_owned()) => {
-                    println!("Rust Projoct Detected");
-
-                    Projects::Rust
-                }
-                _ if files.contains(&enums::Filetype::RequirementsTxt.to_str().to_owned()) => {
-                    println!("Python Projoct Detected");
-
-                    Projects::Python
-                }
-                _ if files.contains(&enums::Filetype::ComposerJson.to_str().to_owned()) => {
-                    println!("Php Projoct Detected");
-
-                    Projects::Php
-                }
-                _ if files.contains(&enums::Filetype::GoSum.to_str().to_owned()) => Projects::Go,
-                _ => {
-                    println!("Unknown or Unsupported Projoct Detected");
-                    Projects::Unknown
-                }
-            };
-            return Ok(project);
-        }
-        Err(err) => {
-            println!("Error while reading directory: {:?}", err);
-            exit(1)
-        }
-    };
+    Ok(project)
 }

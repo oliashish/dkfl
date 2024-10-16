@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
-use log::{debug, error, info, log_enabled, Level};
-use std::path::PathBuf;
+use log::{error, info};
+use std::path::{Path, PathBuf};
 
 mod detect;
 mod enums;
@@ -30,8 +30,12 @@ fn main() {
 
     match &app.command {
         Commands::Create { path } => {
-            let project = detect::detect_project(path);
-            println!("Project from main : {:?}", project)
+            let dir = std::fs::read_dir(path);
+            let project = detect::detect_project(dir);
+
+            // read the root project file and take information like version, app_name, cmd to run the production server etc
+
+            info!("Project from main : {:?}", project);
         }
     }
 }
