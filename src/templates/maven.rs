@@ -1,13 +1,20 @@
-// TODO - Take image_name, app_name and CMD from user input or read the root file and package file
+use super::DockerConfig;
 
-pub fn maven_dkfl<'a>(image_name: &'a str, app_name: &'a str, work_dir: &'a str) -> String {
-    let maven_dkfl_template = format!(
+pub fn maven_dkfl(config: DockerConfig) -> String {
+    let cmd_str = config
+        .cmd
+        .iter()
+        .map(|part| format!(r#""{}""#, part))
+        .collect::<Vec<String>>()
+        .join(", ");
+
+    let dockerfile = format!(
         r#"
 # Stage 1: Build the application using Maven
-FROM {image_name} AS builder
+FROM eclipse-temurin:{app_version} AS builder
 
 # Set the working directory
-WORKDIR {work_dir}
+WORKDIR {work_dir}/{app_name}
 
 # Copy the Maven files and project source code
 COPY pom.xml {work_dir}
@@ -17,18 +24,22 @@ COPY src {work_dir}/src
 RUN mvn clean package -DskipTests
 
 # Stage 2: Create a minimal runtime image
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:{app_version}
 
 # Set the working directory
-WORKDIR {work_dir}
+WORKDIR {work_dir}/{app_name}
 
 # Copy the JAR file from the build stage
 COPY --from=builder {work_dir}/target/*.jar {app_name}.jar
 
 # Command to run the application
-CMD ["java", "-jar", "{app_name}.jar"]
-    "#
+CMD [{cmd}]
+    "#,
+        app_version = config.app_version,
+        app_name = config.app_name,
+        work_dir = config.work_dir,
+        cmd = cmd_str
     );
 
-    maven_dkfl_template.to_owned()
+    dockerfile
 }

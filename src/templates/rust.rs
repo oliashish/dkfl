@@ -1,10 +1,20 @@
 // TODO - Take image_name, app_name and CMD from user input or read the root file and package file
 
-pub fn rust_dkfl<'a>(image_name: &'a str, app_name: &'a str, work_dir: &'a str) -> String {
-    let rust_dkfl_template = format!(
+use super::DockerConfig;
+
+pub fn rust_dkfl(config: DockerConfig) -> String {
+    // Cannot use vector in format string
+    let cmd_str = config
+        .cmd
+        .iter()
+        .map(|part| format!(r#""{}""#, part))
+        .collect::<Vec<String>>()
+        .join(", ");
+
+    let dockerfile = format!(
         r#"
 # Stage 1: Build the Rust project
-FROM {image_name} AS builder
+FROM rust:{app_version} AS builder
 
 # Set the working directory inside the container
 WORKDIR {work_dir}
@@ -30,9 +40,13 @@ WORKDIR {work_dir}
 COPY --from=builder {work_dir}/target/release/{app_name} .
 
 # Specify the command to run the application
-CMD ["./{app_name}"]
-    "#
+CMD [{cmd}]
+    "#,
+        app_version = config.app_version,
+        app_name = config.app_name,
+        work_dir = config.work_dir,
+        cmd = cmd_str,
     );
 
-    rust_dkfl_template.to_owned()
+    dockerfile
 }

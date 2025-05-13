@@ -1,81 +1,123 @@
-use std::collections::{HashMap, HashSet};
-// use std::process::exit;
+use std::path::Path;
 
-use log::{error, info, warn};
+use crate::enums::Projects;
 
-// Assuming these are your enums and structs
-use crate::enums::{Filetype, Projects};
+pub trait ProjectDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects>;
+}
 
-pub fn detect_project(
-    dir: Result<impl Iterator<Item = Result<std::fs::DirEntry, std::io::Error>>, std::io::Error>,
-) -> Result<Projects, std::io::Error> {
-    let dir_entries = dir?;
+pub struct NodejsDetector;
 
-    // Collect file names into a HashSet for efficient lookup
-    let file_names: HashSet<String> = dir_entries
-        .filter_map(|entry_result| match entry_result {
-            Ok(entry) => entry.file_name().to_str().map(String::from),
-            Err(err) => {
-                error!("Error reading directory entry: {:?}", err);
-                None
-            }
-        })
-        .collect();
+impl ProjectDetector for NodejsDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects> {
+        if dir.join("package.json").exists() {
+            Some(Projects::Nodejs)
+        } else {
+            None
+        }
+    }
+}
 
-    // Map file names to Projects variants and messages
-    let project_map: HashMap<&str, (Projects, &str)> = [
-        (
-            Filetype::BuildGradle.to_str(),
-            (Projects::GradleJava, "Gradle Java Project Detected"),
-        ),
-        (
-            Filetype::PomXml.to_str(),
-            (Projects::MavenJava, "Maven Java Project Detected"),
-        ),
-        (
-            Filetype::PackageJson.to_str(),
-            (Projects::Nodejs, "NodeJS Project Detected"),
-        ),
-        (
-            Filetype::Gemfile.to_str(),
-            (Projects::Ruby, "Ruby on Rails Project Detected"),
-        ),
-        (
-            Filetype::CargoToml.to_str(),
-            (Projects::Rust, "Rust Project Detected"),
-        ),
-        (
-            Filetype::RequirementsTxt.to_str(),
-            (Projects::Python, "Python Project Detected"),
-        ),
-        (
-            Filetype::ComposerJson.to_str(),
-            (Projects::Php, "PHP Project Detected"),
-        ),
-        (
-            Filetype::GoSum.to_str(),
-            (Projects::Go, "Go Project Detected"),
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
+pub struct GoDetector;
 
-    // Find the project based on the presence of specific files
-    let project = file_names
-        .iter()
-        .find_map(|file_name| {
-            project_map
-                .get(file_name.as_str())
-                .map(|&(project, message)| {
-                    info!("{}", message);
-                    project
-                })
-        })
-        .unwrap_or_else(|| {
-            warn!("Unknown or Unsupported Project Detected");
-            Projects::Unknown
-        });
+impl ProjectDetector for GoDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects> {
+        if dir.join("go.mod").exists() {
+            Some(Projects::Go)
+        } else {
+            None
+        }
+    }
+}
 
-    Ok(project)
+pub struct RustDetector;
+
+impl ProjectDetector for RustDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects> {
+        if dir.join("Cargo.toml").exists() {
+            Some(Projects::Rust)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct PythonDetector;
+
+impl ProjectDetector for PythonDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects> {
+        if dir.join("requirements.txt").exists() {
+            Some(Projects::Python)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct RubyDetector;
+
+impl ProjectDetector for RubyDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects> {
+        if dir.join("Gemfile").exists() {
+            Some(Projects::Ruby)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct PhpDetector;
+
+impl ProjectDetector for PhpDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects> {
+        if dir.join("composer.json").exists() {
+            Some(Projects::Php)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct MavenJavaDetector;
+
+impl ProjectDetector for MavenJavaDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects> {
+        if dir.join("pom.xml").exists() {
+            Some(Projects::MavenJava)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct GradleJavaDetector;
+
+impl ProjectDetector for GradleJavaDetector {
+    fn detect_project(&self, dir: &Path) -> Option<Projects> {
+        if dir.join("build.gradle").exists() {
+            Some(Projects::GradleJava)
+        } else {
+            None
+        }
+    }
+}
+
+pub fn detect_project(path: &Path) -> Projects {
+    let detectors: Vec<Box<dyn ProjectDetector>> = vec![
+        Box::new(NodejsDetector),
+        Box::new(GoDetector),
+        Box::new(PythonDetector),
+        Box::new(PhpDetector),
+        Box::new(RustDetector),
+        Box::new(MavenJavaDetector),
+        Box::new(GradleJavaDetector),
+    ];
+
+    for detector in detectors {
+        if let Some(project) = detector.detect_project(path) {
+            return project;
+        }
+    }
+
+    Projects::Unknown
 }
